@@ -9,6 +9,7 @@ from typing_extensions import Annotated
 from dotenv import load_dotenv
 import os
 from sqlalchemy.orm import Session
+import yaml
 
 from . import crud, models, schemas
 from .database import SessionLocal, engine
@@ -22,19 +23,13 @@ load_dotenv()
 
 models.Base.metadata.create_all(bind=engine)
 
+# load config file
+with open('config.yaml') as f:
+    config = yaml.load(f, Loader=yaml.FullLoader)
+
 SECRET_KEY = os.environ.get('SECRET_KEY')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
-        "disabled": False,
-    }
-}
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -60,8 +55,9 @@ def index():
 
 @app.on_event("startup")
 def startup_event():
-    global model
-    model = load_model()
+    global model, model_type
+    model_type = 'lr'
+    model = load_model(model_type)
 
 
 def verify_password(plain_password, hashed_password):
@@ -129,7 +125,9 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed_password = get_password_hash(user.password)
     user = models.User(username=user.username, email=user.email, hashed_password=hashed_password)
-    return crud.create_user(db=db, user=user)
+    crud.create_user(db=db, user=user)
+    crud.change_user_credits(db=db, credits=schemas.Credits(amount=config['starting_credits']), username=user.username)
+    return user
 
 
 @app.post("/token")
@@ -152,9 +150,23 @@ async def login_for_access_token(
 
 @app.post("/predict")
 async def predict(current_user: Annotated[schemas.User, Depends(get_current_active_user)],
-                  file: UploadFile = File(...)):
+                  file: UploadFile = File(...), requested_model_type: str = 'lr', db: Session = Depends(get_db)):
     contents = await file.read()
     input_df = pd.read_csv(StringIO(contents.decode()))
-    pred = model.predict(input_df)
-    print(pred)
-    return None
+
+    global model, model_type
+    if requested_model_type != model_type:
+        model_type = requested_model_type
+        model = load_model(model_type)
+
+    model_price = config['models_pricing'][model_type]
+    user_credits = crud.get_user_credits(db=db, username=current_user.username)
+    if user_credits.amount < model_price:
+        return {'text': 'Not enough credits.'}
+    else:
+        pred_result = model.predict(input_df)
+        prediction = schemas.PredictionCreate(model_type=model_type, datetime=datetime.now(timezone.utc))
+        crud.create_prediction(db=db, prediction=prediction, username=current_user.username)
+        crud.change_user_credits(db=db, credits=schemas.Credits(amount=user_credits.amount - model_price),
+                                 username=current_user.username)
+        return pred_result.tolist()

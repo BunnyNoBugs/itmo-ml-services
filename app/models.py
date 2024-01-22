@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -12,15 +12,25 @@ class User(Base):
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
 
-    items = relationship("Item", back_populates="owner")
+    predictions = relationship("Prediction", back_populates="requester")
+    credits = relationship("Credits", uselist=False, back_populates="owner")
 
 
-class Item(Base):
-    __tablename__ = "items"
+class Prediction(Base):
+    __tablename__ = "predictions"
 
     id = Column(Integer, primary_key=True)
-    title = Column(String, index=True)
-    description = Column(String, index=True)
-    owner_username = Column(String, ForeignKey("users.username"))
+    datetime = Column(DateTime, index=True)
+    model_type = Column(String)
+    requester_username = Column(String, ForeignKey("users.username"))
 
-    owner = relationship("User", back_populates="items")
+    requester = relationship("User", back_populates="predictions")
+
+
+class Credits(Base):
+    __tablename__ = "credits"
+
+    owner_username = Column(String, ForeignKey("users.username"), primary_key=True)
+    amount = Column(Integer)
+
+    owner = relationship("User", back_populates="credits")

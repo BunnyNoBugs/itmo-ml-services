@@ -1,0 +1,6 @@
+models_pricing:
+  lr: 5
+  rf: 5
+  gb: 10
+
+starting_credits: 100

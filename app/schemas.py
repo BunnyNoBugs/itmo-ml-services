@@ -1,20 +1,23 @@
 from typing import List, Union
+from datetime import datetime
 
 from pydantic import BaseModel
 
 
-class ItemBase(BaseModel):
-    title: str
-    description: Union[str, None] = None
+# todo: revise fields
+
+class PredictionBase(BaseModel):
+    model_type: str
 
 
-class ItemCreate(ItemBase):
-    pass
+class PredictionCreate(PredictionBase):
+    datetime: datetime
 
 
-class Item(ItemBase):
+class Prediction(PredictionBase):
     id: int
-    owner_id: int
+    datetime: datetime
+    requester_username: str
 
     class Config:
         orm_mode = True
@@ -32,7 +35,7 @@ class UserCreate(UserBase):
 class User(UserBase):
     full_name: Union[str, None] = None
     is_active: bool
-    items: List[Item] = []
+    predictions: List[Prediction] = []
 
     class Config:
         orm_mode = True
@@ -45,3 +48,11 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Union[str, None] = None
+
+
+class Credits(BaseModel):
+    amount: int
+
+
+class UserCredits(Credits):
+    owner_username: str
