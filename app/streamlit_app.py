@@ -5,6 +5,9 @@ st.title('Software classification')
 
 st.subheader('Authorization')
 
+if 'access_token' not in st.session_state:
+    st.session_state.access_token = None
+
 col1, col2 = st.columns([1, 1])
 
 with col1:
