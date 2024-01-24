@@ -169,4 +169,4 @@ async def predict(current_user: Annotated[schemas.User, Depends(get_current_acti
         crud.create_prediction(db=db, prediction=prediction, username=current_user.username)
         crud.change_user_credits(db=db, credits=schemas.Credits(amount=user_credits.amount - model_price),
                                  username=current_user.username)
-        return pred_result.tolist()
+        return {'pred_result': pred_result.tolist()}
