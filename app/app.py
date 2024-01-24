@@ -162,7 +162,10 @@ async def predict(current_user: Annotated[schemas.User, Depends(get_current_acti
     model_price = config['models_pricing'][model_type]
     user_credits = crud.get_user_credits(db=db, username=current_user.username)
     if user_credits.amount < model_price:
-        return {'text': 'Not enough credits.'}
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Not enough credits. {model_price} credits are required, you have {user_credits.amount}."
+        )
     else:
         pred_result = model.predict(input_df)
         prediction = schemas.PredictionCreate(model_type=model_type, datetime=datetime.now(timezone.utc))
