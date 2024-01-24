@@ -126,7 +126,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     hashed_password = get_password_hash(user.password)
     user = models.User(username=user.username, email=user.email, hashed_password=hashed_password)
     crud.create_user(db=db, user=user)
-    crud.change_user_credits(db=db, credits=schemas.Credits(amount=config['starting_credits']), username=user.username)
+    crud.create_user_credits(db=db, credits=schemas.Credits(amount=config['starting_credits']), username=user.username)
     return user
 
 

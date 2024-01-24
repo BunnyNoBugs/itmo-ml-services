@@ -38,6 +38,14 @@ def get_user_credits(db: Session, username: str):
     return db.query(models.Credits).filter(models.Credits.owner_username == username).first()
 
 
+def create_user_credits(db: Session, credits: schemas.Credits, username: str):
+    db_credits = models.Credits(**credits.dict(), owner_username=username)
+    db.add(db_credits)
+    db.commit()
+    db.refresh(db_credits)
+    return db_credits
+
+
 def change_user_credits(db: Session, credits: schemas.Credits, username: str):
     db_credits = db.query(models.Credits).filter(models.Credits.owner_username == username).first()
     db_credits.amount = credits.amount
