@@ -1,4 +1,4 @@
-A pet project of a web ML app. Some features:
+A pet project of an ML web service. Some features:
  - FastAPI backend
  - JWT authentication
  - user database and billing
